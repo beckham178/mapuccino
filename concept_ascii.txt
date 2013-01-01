@@ -1,0 +1,133 @@
+mapuccino
+
+map
+
+inputting waypoints and times
+	---------------
+	V minutes here
+	  depart at
+	  arrive by
+	---------------
+
+
+
+updating the itinerary based on current step & time
+  update button in the top right: icon is a clock outlined by a refresh arrow
+
+
+
+reviewing the itinerary
+  Itinerary button takes you to the itinerary page
+
+
+
+PAGES
+
+Map - Itinerary
+      |
+      Edit
+  
+
+
+
+MAP PAGE
+
+=======================
+Itinerary           >_|
+
+
+
+-----------------------
+
+
+
+    m a p  w / 
+  c u r r e n t  l e g
+
+
+
+-----------------------
+
+< [ ] C U R R E N T  > 
+=======================
+
+
+
+
+ITINERARY PAGE
+
+=======================
+Map                 >_|
+
+
+
+[ ] Starting point
+    Departure point
+    - Time indicator
+
+[ ] Starting point
+    Departure point
+    - Time indicator
+
+[ ] Starting point
+    Departure point
+    - Time indicator
+
+-----------------------
+        Edit 
+=======================
+
+
+
+
+ITINERARY PAGE - EDIT
+
+=======================
+Map                 >_|
+
+
+
+[ ] Starting point
+    Departure point   >
+    - Time indicator
+
+[ ] Starting point
+    Departure point   >
+    - Time indicator
+
+[ ] Starting point
+    Departure point   >
+    - Time indicator
+
+-----------------------
+        Edit 
+=======================
+
+
+
+
+
+EDIT PAGE
+
+=======================
+Cancel             Done
+
+
+Start: ________________
+  End: ________________
+
+(Depart at | Here for | Arrive by)
+
+ Date / Timer selector
+  ___________ _______
+ |___________|_______|
+ |___________|_______|
+ |___________|_______|
+ |___________|_______|
+ |___________|_______|
+ |___________|_______|
+
+
+
+        Delete
+=======================

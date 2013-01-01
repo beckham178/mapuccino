@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Mapuccino Mobile</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="stylesheet" href="http://code.jquery.com/mobile/1.2.0/jquery.mobile-1.2.0.min.css" />
+	<script src="http://code.jquery.com/jquery-1.8.2.min.js"></script>
+	<script src="http://code.jquery.com/mobile/1.2.0/jquery.mobile-1.2.0.min.js"></script>
+	<script type="text/javascript" src="extras/coffee-script.js"></script> <!-- LOCAL -->
+	
+	<script type="text/coffeescript">
+		alert "CoffeeScript is working!"
+		
+		footer = """
+		<div data-role="footer" data-id="foo1" data-position="fixed">
+			<div data-role="navbar">
+				<ul>
+					<li><a href="#map">Map</a></li>
+					<li><a href="#itinerary">Itinerary</a></li>
+				</ul>
+			</div><!-- /navbar -->
+		</div><!-- /footer -->
+		"""		
+		pages = $('[data-role="content"]')
+		pages.css('color','#0F0')
+		pages.append(footer)
+
+	</script>
+	
+</head>
+
+
+ 
+<body> 
+
+	<div data-role="page" id="map">
+		<div data-role="header">
+			<h1>Map</h1>
+		</div><!-- /header -->
+		<div data-role="content">	
+			<p>Map & Controls go here</p>
+		</div><!-- /content -->
+	</div><!-- /page -->
+	
+	
+	<div data-role="page" id="itinerary">
+		<div data-role="header">
+			<h1>Itinerary</h1>
+		</div><!-- /header -->
+		<div data-role="content">	
+			<p>Hello worlder</p>
+		</div><!-- /content -->	
+	</div><!-- /page -->
+
+			
+</body>
+</html>
+
+<!--
+
+STEPS
+ put together page with jquery mobile, all divs
+
+structure
+two pages via jquery mobile
+
+DOM
+
+div: map
+div: itinerary of inputs, going back to map will
+												geocode all locations
+												  overlay: addresses that won't geocode
+												collect routes into json 'requests' object
+												replot routes
+												push times forward based on each response
+												  overlay: time changes if changes were made
+												
+
+next/prev on map page, disable buttons based on pos vs length
+ http://jquerymobile.com/demos/1.2.0/docs/buttons/buttons-icons.html //use set c ui-corner-left&right
+  add class="ui-disabled" to button depending on : perform prev on click
+
+
+request process
+  collect locations and times into requests json object
+  for each waypoint set
+    build request
+    make request
+    pull from request: html_directions, arrival time
+    
+  
+#chain events with callbacks
+    
+    -->
+
