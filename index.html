@@ -1,30 +1,131 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<title>Mapuccino Mobile</title>
+	<title>Mapuccino</title>
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<link rel="stylesheet" href="http://code.jquery.com/mobile/1.2.0/jquery.mobile-1.2.0.min.css" />
 	<script src="http://code.jquery.com/jquery-1.8.2.min.js"></script>
 	<script src="http://code.jquery.com/mobile/1.2.0/jquery.mobile-1.2.0.min.js"></script>
 	<script type="text/javascript" src="extras/coffee-script.js"></script> <!-- LOCAL -->
 	
+	<script src="http://maps.googleapis.com/maps/api/js?key=AIzaSyCnP7m-ijtzhr6Om-bVJJMVsc5dZE4B8v4&sensor=false"></script>
 	<script type="text/coffeescript">
-		alert "CoffeeScript is working!"
+	
+	$ ->
 		
-		footer = """
-		<div data-role="footer" data-id="foo1" data-position="fixed">
-			<div data-role="navbar">
-				<ul>
-					<li><a href="#map">Map</a></li>
-					<li><a href="#itinerary">Itinerary</a></li>
-				</ul>
-			</div><!-- /navbar -->
-		</div><!-- /footer -->
-		"""		
-		pages = $('[data-role="content"]')
-		pages.css('color','#0F0')
-		pages.append(footer)
+		# MAP SETUP
+		
+		defaultMapOptions =
+			center: new google.maps.LatLng(42.35, -71.05),
+			zoom: 10,
+			mapTypeId: google.maps.MapTypeId.ROADMAP
+		
+		map_display = $("#map_canvas").get(0)
+		map = new google.maps.Map( map_display, defaultMapOptions )
+		
+		# GEOCODING SETUP
+		geocoder = new google.maps.Geocoder
+		geocode = (address) ->
+			geocoderParams =
+				address: address
+				region: "US"
+			geocoder.geocode geocoderParams, (results, status) ->
+				if status == google.maps.GeocoderStatus.OK
+					return results[0].formatted_address # return correct addr
+					# do i need a return before geocoder.geocode...?
+		
+		# DIRECTIONS SETUP
+		
+		directionsService = new google.maps.DirectionsService
+		directionsDisplay = new google.maps.DirectionsRenderer
+		directionsDisplay.setMap(map)
+		
+		get_response_for = (request) ->
+			directionsService.route request, (response, status) ->
+				return [response, status]
+		
+		# UI
+		
+		directions_display = $("#directions_display") ; directions_display.hide()
+		arrow_btns = $("#arrow_btns") ; arrow_btns.hide()
 
+		recalculate_btn = $("#recalculate_btn")
+		start_btn = $("#start_btn")
+		add_btn = $("#add")
+
+		waypoints = $("#waypoints")
+		
+		waypoint_input = '''
+			<div data-role="content" class="waypoint">
+				<hr>
+				<input type="text" name="location" class="location" placeholder="Location" />
+				<select name="interval_type" class="interval_type">
+					<option value="departureTime">Depart at</option>
+					<option value="arrivalTime">Arrive by</option>
+				</select>
+				<input type="date" name="date" class="date" />
+				<input type="time" name="time" class="time" />
+				<a href="#" data-role="button" class="remove_btn" data-iconpos="notext" data-icon="delete" data-theme="b">Delete</a>
+			</div><!-- /waypoint -->
+		'''
+		
+		start_btn.on "click", ->
+			start_btn.hide()
+			arrow_btns.show()
+			directions_display.show()
+			
+		recalculate_btn.on "click", ->
+			start_btn.show()
+			arrow_btns.hide()
+			directions_display.hide()
+			
+		add_btn.on "click", ->
+			add_btn.before waypoint_input
+			waypoints.trigger 'create'
+			$(".remove_btn").on "click", ->
+				$(this).parent().andSelf().remove()
+		
+		###		
+		
+		# this should be wrapped in a function
+		# which is called upon recalculate()
+		
+		locations = location.value for location in $(".location")
+		interval_types = interval_type.value for interval_type in $(".interval_type option:selected")
+		dates = date.value for date in $(".date")
+		times = time.value for time in $(".time")
+		datetimes = 0 # conversion of date + time to UTC
+		
+		requests = []
+
+		# build requests array: JSON array
+		for i in [0..(locations.length-2)]
+			do (i) ->
+				request = 
+				  origin: locations[i]
+				  destination: locations[i+1]
+				  travelMode: google.maps.TravelMode.TRANSIT
+				  transitOptions:
+				  	interval_types[i]: datetimes[i]
+		
+		# loop over requests getting routes -- a little more sf this way
+		responses = for request in requests
+			attempts = 0 ; success = false
+			until success == true or attempts = 3
+				attempts += 1
+				response, status = get_response_for(request)
+				switch status
+					when "OK" then success = true; continue
+					when "NOT_FOUND" or "ZERO_RESULTS" then
+						request.origin = geocode(request.origin)
+						request.destination = geocode(request.destination)
+					when "OVER_QUERY_LIMIT" then ->
+					    callback = -> continue
+					    setTimeout callback, 1000
+			return response
+		
+		###
+		
 	</script>
 	
 </head>
@@ -33,23 +134,84 @@
  
 <body> 
 
+	<!-- MAP PAGE -->
+	
 	<div data-role="page" id="map">
-		<div data-role="header">
-			<h1>Map</h1>
+	
+		<div data-role="content" data-theme="a" class="ui-grid-b">
+			<div class="ui-block-a">
+				<a href="#" data-role="button" data-icon="refresh" id="recalculate_btn">Recalculate</a>
+			</div>
+			<div class="ui-block-b">
+				<h1 style="text-align:center">Map</h1>
+			</div>
+			<div class="ui-block-c">
+				<a href="#" data-role="button" data-theme="b" id="start_btn">Start</a>
+				<div data-role="controlgroup" data-type="horizontal" id="arrow_btns">
+					<a href="#" data-role="button" data-icon="arrow-l">&nbsp;</a>
+					<a href="#" data-role="button" data-icon="arrow-r">&nbsp;</a>
+				</div>
+			</div>
 		</div><!-- /header -->
-		<div data-role="content">	
-			<p>Map & Controls go here</p>
+
+		<div data-role="content" id="directions_display" data-theme="b">
+			<div class="ui-grid">
+				<div class="ui-block" style="width:50px; float:left;">
+					<label><input type="checkbox" name="checkbox-0" />&nbsp;</label>
+				</div>
+				<div class="ui-block" style="float:left; padding:10px;">
+					Directions
+				</div>
+			</div>
 		</div><!-- /content -->
+		
+		<div id="map_canvas" style="width:100%; height:500px">Map</div>
+		
+		<div data-role="footer" data-id="foo1" data-position="fixed" class="ui-footer ui-bar-a ui-footer-fixed slideup" role="contentinfo">
+			<div data-role="navbar">
+				<ul>
+					<li><a href="#map">Map</a></li>
+					<li><a href="#itinerary">Itinerary</a></li>
+				</ul>
+			</div><!-- /navbar -->
+		</div><!-- /footer -->
+		
 	</div><!-- /page -->
 	
 	
+	<!-- ITINERARY PAGE -->
+	
 	<div data-role="page" id="itinerary">
+	
 		<div data-role="header">
+			<a href="#" data-role="button" data-icon="refresh" id="recalculate_btn">Recalculate</a>
 			<h1>Itinerary</h1>
+			<a href="#" data-role="button" data-theme="b">Edit</a>
 		</div><!-- /header -->
-		<div data-role="content">	
-			<p>Hello worlder</p>
-		</div><!-- /content -->	
+		<div data-role="content" id="waypoints">	
+		
+			<div data-role="content" class="waypoint">
+				<input type="text" name="location" class="location" placeholder="Location" />
+				<select name="interval_type" class="interval_type">
+					<option value="departureTime">Depart at</option>
+					<option value="arrivalTime">Arrive by</option>
+				</select>
+				<input type="date" name="date" class="date" />
+				<input type="time" name="time" class="time" />
+				<a href="#" data-role="button" id="add" data-iconpos="notext" data-icon="add" data-theme="b">Add Waypoint</a>
+			</div><!-- /waypoint -->
+			
+		</div><!-- /content -->
+		
+		<div data-role="footer" data-id="foo1" data-position="fixed" class="ui-footer ui-bar-a ui-footer-fixed slideup" role="contentinfo">
+			<div data-role="navbar">
+				<ul>
+					<li><a href="#map">Map</a></li>
+					<li><a href="#itinerary">Itinerary</a></li>
+				</ul>
+			</div><!-- /navbar -->
+		</div><!-- /footer -->
+		
 	</div><!-- /page -->
 
 			
@@ -57,6 +219,40 @@
 </html>
 
 <!--
+
+waypoints =
+	[
+		location: location
+		,
+		location: location
+	]
+
+interval =
+	[
+		interval_position: departure # or arrival
+		interval_type: time # or duration
+		interval_amount: # 3:20 can be 3:20am or 3h20m
+		,
+		interval_position: departure # or arrival
+		interval_type: time # or duration
+		interval_amount: # 3:20 can be 3:20am or 3h20m
+	]
+
+requests =
+	[
+		origin: origin
+		destination: destination
+		travelMode: google.maps.TravelMode.TRANSIT
+		transitOptions:
+			departureTime: departure_time
+		,
+		origin: origin
+		destination: destination
+		travelMode: google.maps.TravelMode.TRANSIT
+		transitOptions:
+			departureTime: departure_time
+	]
+
 
 STEPS
  put together page with jquery mobile, all divs
