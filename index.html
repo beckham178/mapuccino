@@ -6,6 +6,9 @@
 	<link rel="stylesheet" href="http://code.jquery.com/mobile/1.2.0/jquery.mobile-1.2.0.min.css" />
 	<script src="http://code.jquery.com/jquery-1.8.2.min.js"></script>
 	<script src="http://code.jquery.com/mobile/1.2.0/jquery.mobile-1.2.0.min.js"></script>
+	
+	<script type="text/javascript" src="extras/date.js"></script>
+	
 	<script type="text/javascript" src="extras/coffee-script.js"></script> <!-- LOCAL -->
 	
 	<script src="http://maps.googleapis.com/maps/api/js?key=AIzaSyCnP7m-ijtzhr6Om-bVJJMVsc5dZE4B8v4&sensor=false"></script>
@@ -43,6 +46,10 @@
 		get_response_for = (request) ->
 			directionsService.route request, (response, status) ->
 				return [response, status]
+		
+		# ACCESSING DATES AND TIMES IN RESPONSES
+		get_arrival_time = (response) ->
+			return Date.parse( response.legs[0].arrival_time.value )
 		
 		# UI
 		
@@ -85,47 +92,64 @@
 			$(".remove_btn").on "click", ->
 				$(this).parent().andSelf().remove()
 		
-		###		
+		# Recalculate Itinerary
 		
-		# this should be wrapped in a function
-		# which is called upon recalculate()
+		### 
 		
-		locations = location.value for location in $(".location")
-		interval_types = interval_type.value for interval_type in $(".interval_type option:selected")
-		dates = date.value for date in $(".date")
-		times = time.value for time in $(".time")
-		datetimes = 0 # conversion of date + time to UTC
+		recalculate_btn.on "click", ->
+			recalculate
 		
-		requests = []
-
-		# build requests array: JSON array
-		for i in [0..(locations.length-2)]
-			do (i) ->
+		recalculate ->
+		    locations = (location.value for location in $(".location"))
+		    interval_types = (interval_type.value for interval_type in $(".interval_type option:selected"))
+		    dates = (date.value for date in $(".date"))
+		    times = (time.value for time in $(".time"))
+			datetimes = ( Date.parse(dates[i] + times[i]) for i in [0..dates.length-1] )
+			
+			# build requests array: JSON array
+			# TODO: departure times have to be spaced at least 5 minutes after the previous
+			requests = []
+			for i in [0..(locations.length-2)]
 				request = 
 				  origin: locations[i]
 				  destination: locations[i+1]
 				  travelMode: google.maps.TravelMode.TRANSIT
 				  transitOptions:
-				  	interval_types[i]: datetimes[i]
-		
-		# loop over requests getting routes -- a little more sf this way
-		responses = for request in requests
-			attempts = 0 ; success = false
-			until success == true or attempts = 3
-				attempts += 1
-				response, status = get_response_for(request)
-				switch status
-					when "OK" then success = true; continue
-					when "NOT_FOUND" or "ZERO_RESULTS" then
-						request.origin = geocode(request.origin)
-						request.destination = geocode(request.destination)
-					when "OVER_QUERY_LIMIT" then ->
-					    callback = -> continue
-					    setTimeout callback, 1000
-			return response
-		
-		###
-		
+					interval_types[i]: datetimes[i]
+				requests.push request
+			
+			# just make the first request. set the time_cursor to returned arrivalTime,
+			# because departure time doesn't matter to the time cursor, only to the request
+			
+			responses = [] # THIS MAY NOT BE AVAILABLE OUTSIDE OF THE SCOPE OF THE CLICK
+			time_cursor = Date.today().setTimeToNow()
+			for request in requests
+				do (request) ->
+					if request.transitOptions.departureTime < time_cursor
+						request.transitOptions.departureTime = time_cursor
+					success = false ; attempts = 0
+					until success == true or attempts == 3
+						attempts += 1
+						[response, status] = get_response_for(request)
+						switch status
+							when "OK"
+								success = true
+								responses.push response
+								time_cursor = get_arrival_time(response)
+							when "NOT_FOUND"
+								request.origin = geocode(request.origin)
+								request.destination = geocode(request.destination)
+							when "ZERO_RESULTS"
+								request.origin = geocode(request.origin)
+								request.destination = geocode(request.destination)
+							when "OVER_QUERY_LIMIT"
+								callback = -> $("body").append "OVER_QUERY_LIMIT HALP"
+								setTimeout callback, 1000
+			
+			# change itinerary values based on responses, alert user after if changes
+			
+			# rifle through steps
+					
 	</script>
 	
 </head>
@@ -253,6 +277,9 @@ requests =
 			departureTime: departure_time
 	]
 
+
+TODOS:
+	host all frameworks locally
 
 STEPS
  put together page with jquery mobile, all divs
